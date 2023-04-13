@@ -3,7 +3,8 @@ import speech_recognition as sr
 import openai
 
 # Configurar las credenciales de OpenAI
-openai.api_key = "TU_CLAVE_DE_API_DE_OPENAI"
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
 
 # Configurar la página de Streamlit
 st.set_page_config(page_title="Transcriptor de audio con Streamlit", page_icon=":microphone:", layout="wide")
