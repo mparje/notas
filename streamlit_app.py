@@ -3,56 +3,38 @@ import speech_recognition as sr
 import openai
 import os
 
-# Configurar las credenciales de OpenAI
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# Configure la API de OpenAI con su clave secreta
+openai.api_key = os.getenv("YOUR_API_KEY")
 
+st.set_page_config(page_title="Transcripción y depuración de audio", page_icon=":microphone:", layout="wide")
 
-# Configurar la página de Streamlit
-st.set_page_config(page_title="Transcriptor de audio con Streamlit", page_icon=":microphone:", layout="wide")
+st.title("Transcripción y depuración de audio")
 
-# Configurar el título y la descripción
-st.title("Transcriptor de audio en español")
-st.markdown("""
-Esta aplicación utiliza la librería de SpeechRecognition para transcribir audio en español durante dos minutos. Luego, utiliza el modelo text-davinci-002 de OpenAI para depurar el texto transcrito y ordenar las ideas.
+# Cargar archivo de audio
+audio_file = st.file_uploader("Cargar archivo de audio", type=["wav", "mp3"])
 
-Para utilizar la aplicación, haz clic en el botón "Iniciar grabación" y comienza a hablar o a reproducir un archivo de audio. Una vez que hayan pasado dos minutos, la transcripción se detendrá automáticamente y el texto transcrito se mostrará en la página.
-
-**Nota:** Esta aplicación requiere una conexión a internet activa para poder utilizar el modelo de OpenAI.
-""")
-
-# Definir la función que transcribe el audio
-def transcribir_audio():
+if audio_file:
+    # Convertir el archivo de audio a texto utilizando la biblioteca SpeechRecognition
     r = sr.Recognizer()
-    with sr.Microphone() as source:
-        st.write("Comenzando a grabar...")
-        audio = r.record(source, duration=120)
-        st.write("Grabación finalizada.")
-        st.write("Transcribiendo audio...")
-        try:
-            texto_transcrito = r.recognize_google(audio, language="es-ES")
-            st.write("Texto transcrito:")
-            st.write(texto_transcrito)
-            return texto_transcrito
-        except sr.UnknownValueError:
-            st.error("No se pudo transcribir el audio.")
-            return None
+    audio_data = sr.AudioFile(audio_file)
+    with audio_data as audio:
+        audio_text = r.record(audio)
+        transcript = r.recognize_google(audio_text, language="es-ES")
+        
+    # Mostrar el texto transcrito
+    st.header("Texto transcrito")
+    st.write(transcript)
 
-# Definir la función que depura el texto transcrito
-def depurar_texto(texto_transcrito):
-    st.write("Depurando texto...")
-    prompt = f"Actúa como un secretario que transcribe y redacta en forma ordenada y precisa los pensamientos desordenados del usuario:\n\n{texto_transcrito}"
-    modelo_openai = openai.Completion.create(
-        engine="text-davinci-002",
-        prompt=prompt,
-        max_tokens=1024,
-        temperature=0.7
+    # Depurar el texto utilizando la API de OpenAI
+    st.header("Texto depurado")
+    response = openai.Completion.create(
+        engine="text-davinci-003",
+        prompt=f"Actúa como un secretario que transcribe y redacta en forma ordenada y precisa los pensamientos desordenados del usuario:\n{transcript}",
+        temperature=0.7,
+        max_tokens=60,
+        top_p=1,
+        frequency_penalty=0,
+        presence_penalty=0
     )
-    texto_depurado = modelo_openai.choices[0].text
-    st.write("Texto depurado:")
-    st.write(texto_depurado)
-
-# Agregar los botones para iniciar la grabación y depurar el texto
-if st.button("Iniciar grabación"):
-    texto_transcrito = transcribir_audio()
-    if texto_transcrito is not None:
-        depurar_texto(texto_transcrito)
+    edited_text = response.choices[0].text
+    st.write(edited_text)
