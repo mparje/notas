@@ -1,43 +1,61 @@
 import streamlit as st
-import speech_recognition as sr
+import soundfile as sf
+import deepspeech
 import openai
+import time
 import os
 
-# Configura las credenciales de autenticación para la API de GPT
-openai.api_key = os.getenv("API_KEY")
+# Cargamos el modelo de DeepSpeech en español
+model_file_path = 'path/to/deepspeech-0.9.3-models.pbmm'
+model = deepspeech.Model(model_file_path)
+model.enableExternalScorer('path/to/deepspeech-0.9.3-models.scorer')
 
-# Configura el título de la aplicación
+# Configuramos los parámetros de la API de OpenAI
+openai.api_key = os.getenv("API_KEY")
+model_engine = "text-davinci-003"
+
+# Función para transcribir el archivo de audio
+def transcribe_audio(file_path):
+    audio, sample_rate = sf.read(file_path)
+    audio_length = len(audio) * (1 / sample_rate)
+
+    # Transcribimos el archivo con DeepSpeech
+    text = model.stt(audio)
+    return text
+
+# Función para depurar el texto con OpenAI
+def clean_text(text):
+    prompt = "Actúa como un secretario que transcribe y redacta en forma ordenada y precisa los pensamientos desordenados del usuario:\n\n" + text
+    response = openai.Completion.create(
+        engine=model_engine,
+        prompt=prompt,
+        temperature=0.7,
+        max_tokens=2048,
+        n = 1,
+        stop=None,
+        timeout=20,
+    )
+    return response.choices[0].text.strip()
+
+# Creamos la app de Streamlit
 st.title("Transcripción y depuración de audio")
 
-# Permite al usuario subir un archivo de audio
-archivo = st.file_uploader("Sube un archivo de audio en formato WAV o FLAC", type=["wav", "flac"])
+# Subimos el archivo de audio
+audio_file = st.file_uploader("Sube un archivo de audio en formato WAV", type=["wav"])
 
-if archivo:
-    # Crea un objeto de reconocimiento de voz
-    r = sr.Recognizer()
+if audio_file is not None:
+    # Transcribimos el archivo de audio
+    st.write("Transcribiendo archivo de audio...")
+    with open("audio.wav", "wb") as f:
+        f.write(audio_file.read())
+    text = transcribe_audio("audio.wav")
+    st.write("Texto transcritp: ")
+    st.write(text)
 
-    # Lee el audio desde el archivo
-    audio = sr.AudioFile(archivo)
-    with audio as source:
-        audio_data = r.record(source)
-
-    # Transcribe el audio utilizando la API de reconocimiento de voz de Google
-    texto = r.recognize_google(audio_data, language='es-ES')
-
-    # Depura el texto transrito utilizando GPT
-    prompt = "Actúa como un secretario que transcribe y redacta en forma ordenada y precisa los pensamientos desordenados del usuario:\n\n" + texto
-    respuesta = openai.Completion.create(
-        engine="text-davinci-003",
-        prompt=prompt,
-        max_tokens=1024,
-        n=1,
-        stop=None,
-        temperature=0.5,
-    )
-    texto_dep = respuesta.choices[0].text.strip()
-
-    # Muestra el texto transcrito y depurado en la aplicación
-    st.write("Texto transcrito:")
-    st.write(texto)
-    st.write("Texto depurado:")
-    st.write(texto_dep)
+    # Depuramos el texto con OpenAI
+    st.write("Depurando el texto...")
+    cleaned_text = clean_text(text)
+    st.write("Texto depurado: ")
+    st.write(cleaned_text)
+else:
+    st.write("Sube un archivo de audio para comenzar.")
