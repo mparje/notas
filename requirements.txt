@@ -1,5 +1,6 @@
-numpy==1.19.3
-streamlit==0.85.0
-soundfile==0.10.3.post1
-SpeechRecognition==3.8.1
+numpy
+openai
+streamlit
+soundfile
+SpeechRecognition
 
