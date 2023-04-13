@@ -1,6 +1,5 @@
 import streamlit as st
-import speech_recognition as sr
-import openai_secret_manager
+import speech_recognition
 import openai
 import os
 
