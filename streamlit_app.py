@@ -21,7 +21,7 @@ def transcribir_audio(audio_file):
 # Función para mejorar el texto utilizando GPT-3
 def mejorar_texto(texto):
     response = openai.Completion.create(
-      engine="davinci",
+      engine="text-davinci-003",
       prompt=(f"Mejora el siguiente texto:\n{texto}\n\n"),
       temperature=0.5,
       max_tokens=150,
