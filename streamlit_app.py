@@ -1,53 +1,45 @@
-import os
 import streamlit as st
-import openai
+import requests
 import soundfile as sf
-import tempfile
+import io
+import os
 
-st.title("App de Speech to Text con OpenAI")
+# Token de OpenAI
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Obtener la clave de la API de OpenAI desde una variable de entorno
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# Modelo de transcripción de OpenAI
+OPENAI_MODEL = "whisper-1"
 
-st.write("Cargue un archivo MP3 para transcribir:")
+# Título de la aplicación
+st.title("Transcripción de audio con OpenAI")
 
-# Función que carga el archivo de audio seleccionado por el usuario
-def load_audio():
-    uploaded_file = st.file_uploader("Seleccione un archivo de audio", type=["mp3"])
-    if uploaded_file is not None:
-        # Crear un archivo temporal para guardar el archivo de audio cargado
-        with tempfile.NamedTemporaryFile(delete=False) as f:
-            f.write(uploaded_file.read())
-            filename = f.name
-        return filename
+# Archivo de audio para subir
+uploaded_file = st.file_uploader("Selecciona un archivo de audio MP3", type="mp3")
 
-filename = load_audio()
-audio_data, sample_rate = sf.read(audio_file, dtype='float32', channels=1)
+# Si se ha subido un archivo
+if uploaded_file is not None:
+    # Leer el archivo de audio en memoria
+    audio_data, sample_rate = sf.read(io.BytesIO(uploaded_file.read()), dtype='float32', channels=1)
 
+    # Encabezados de solicitud
+    headers = {
+        "Authorization": f"Bearer {OPENAI_API_KEY}",
+        "Content-Type": "multipart/form-data",
+    }
 
-if filename:
-    st.write("Transcribiendo texto...")
-
-    # Leer el archivo MP3 y convertirlo a WAV para poder enviarlo a la API de OpenAI
-    with open(filename, "rb") as f:
-        audio_data = f.read()
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
-        sf.write(f.name, audio_data, samplerate=44100)
-        wav_filename = f.name
-
-    # Leer el archivo WAV convertido y enviarlo a la API de OpenAI para obtener la transcripción
-    with open(wav_filename, "rb") as f:
-        audio_data = f.read()
-    response = openai.Completion.create(
-        engine="davinci",
-        prompt="Transcribe the following audio:",
-        audio=audio_data,
-        max_tokens=1024,
-        n_best=1,
-        temperature=0,
+    # Realizar la solicitud a la API de OpenAI
+    response = requests.post(
+        "https://api.openai.com/v1/audio/transcriptions",
+        headers=headers,
+        data={
+            "file": ("audio.mp3", io.BytesIO(uploaded_file.read()), "audio/mp3"),
+            "model": OPENAI_MODEL,
+        },
     )
 
-    # Mostrar la transcripción en la página
-    transcription = response.choices[0].text.strip()
+    # Obtener la transcripción del archivo de audio
+    transcription = response.json()["data"][0]["text"]
+
+    # Mostrar la transcripción
     st.write("Transcripción:")
     st.write(transcription)
