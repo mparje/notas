@@ -2,7 +2,7 @@ import base64
 import json
 import os
 import requests
-import srtreamlit as st
+import streamlit as st
 import openai
 
 # Definir la clave de la API de Rev.ai
