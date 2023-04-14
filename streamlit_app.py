@@ -3,6 +3,7 @@ import requests
 import os
 import json
 import openai
+import io
 
 # Establecer las credenciales de OpenAI
 openai.api_key = os.getenv("OPENAI_API_KEY")
