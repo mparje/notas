@@ -9,36 +9,21 @@ import io
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Definir la función para transcribir el audio usando Rev.ai
-def transcribe_audio(audio_file):
-    url = "https://api.rev.ai/speechtotext/v1/jobs"
-    headers = {
-        "Authorization": "Bearer " + os.getenv("REV_AI_API_KEY"),
-        "Content-Type": "application/json",
-    }
-    data = {
-        "media": {"type": "audio/mp3", "data": audio_file.getvalue()},
-        "metadata": "Testing",
-    }
-    response = requests.post(url, headers=headers, data=json.dumps(data))
-    response.raise_for_status()
-    response_data = json.loads(response.text)
-    job_id = response_data["id"]
-    transcript = None
-    while transcript is None:
-        response = requests.get(
-            f"https://api.rev.ai/speechtotext/v1/jobs/{job_id}/transcript",
-            headers=headers,
-        )
-        response.raise_for_status()
-        response_data = json.loads(response.text)
-        if response_data["status"] == "transcribed":
-            transcript_url = response_data["links"]["self"]
-            response = requests.get(transcript_url, headers=headers)
-            response.raise_for_status()
-            transcript_data = json.loads(response.text)
-            transcript = transcript_data["monologues"][0]["elements"]
-    return transcript
 
+def transcribe_audio(audio_file):
+    headers = {
+        'Authorization': f'Bearer {bearer_token}',
+        'Content-Type': 'application/octet-stream'
+    }
+
+    with io.BytesIO(audio_file.read()) as f:
+        audio_bytes = f.read()
+
+    response = requests.post(url, headers=headers, data=audio_bytes.decode('utf-8'))
+
+    response.raise_for_status()
+
+    return response.json()['text']
 
 
 # Definir la función para ordenar el texto
