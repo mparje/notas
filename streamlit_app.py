@@ -39,7 +39,7 @@ with open(file.name, 'rb') as f:
             response.raise_for_status()
             transcript_data = json.loads(response.text)
             transcript = transcript_data["monologues"][0]["elements"]
-    return transcript
+        return transcript
 
 
 # Definir la función para ordenar el texto
