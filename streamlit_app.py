@@ -3,7 +3,8 @@ import streamlit as st
 import openai
 import os
 
-openai.api_key = os.getenv("YOUR_API_KEY")
+openai.api_key = os.environ.get("OPENAI_API_KEY")
+
 
 # función para mejorar el texto generado
 def mejorar_texto(texto_generado):
