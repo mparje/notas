@@ -8,33 +8,33 @@ import openai
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Definir la función para transcribir el audio usando Rev.ai
-# Definir la función para transcribir el audio usando Rev.ai
 def transcribe_audio(audio_file):
-    api_url = "https://api.rev.ai/speechtotext/v1/jobs"
+    url = "https://api.rev.ai/speechtotext/v1/jobs"
     headers = {
         "Authorization": "Bearer " + os.getenv("REV_AI_API_KEY"),
-        "Content-Type": "application/octet-stream"
+        "Content-Type": "application/json",
     }
-    response = requests.post(api_url, headers=headers, data=audio_file)
-    response.raise_for_status()
-    response_data = json.loads(response.text)
-    job_id = response_data["id"]
-    transcript = None
-    while transcript is None:
-        response = requests.get(
-            f"https://api.rev.ai/speechtotext/v1/jobs/{job_id}/transcript",
-            headers=headers,
-        )
+    with open(audio_file.name, 'rb') as f:
+        file_bytes = f.read()
+        response = requests.post(url, headers=headers, data=file_bytes)
         response.raise_for_status()
         response_data = json.loads(response.text)
-        if response_data["status"] == "transcribed":
-            transcript_url = response_data["links"]["self"]
-            response = requests.get(transcript_url, headers=headers)
+        job_id = response_data["id"]
+        transcript = None
+        while transcript is None:
+            response = requests.get(
+                f"https://api.rev.ai/speechtotext/v1/jobs/{job_id}/transcript",
+                headers=headers,
+            )
             response.raise_for_status()
-            transcript_data = json.loads(response.text)
-            transcript = transcript_data["monologues"][0]["elements"]
-    return transcript
-
+            response_data = json.loads(response.text)
+            if response_data["status"] == "transcribed":
+                transcript_url = response_data["links"]["self"]
+                response = requests.get(transcript_url, headers=headers)
+                response.raise_for_status()
+                transcript_data = json.loads(response.text)
+                transcript = transcript_data["monologues"][0]["elements"]
+        return transcript
 
 
 # Definir la función para ordenar el texto
