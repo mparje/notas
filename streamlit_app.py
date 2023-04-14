@@ -22,6 +22,8 @@ def load_audio():
         return filename
 
 filename = load_audio()
+audio_data, sample_rate = sf.read(audio_file, dtype='float32', channels=1)
+
 
 if filename:
     st.write("Transcribiendo texto...")
