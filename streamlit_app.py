@@ -5,6 +5,8 @@ import json
 import openai
 import io
 
+bearer_token = os.environ.get("BEARER_TOKEN")
+
 # Establecer las credenciales de OpenAI
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
