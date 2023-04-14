@@ -2,4 +2,5 @@ streamlit
 openai
 soundfile
 pydub
-
+numpy
+requests
