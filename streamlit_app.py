@@ -18,7 +18,7 @@ def transcribe_audio(audio_file):
         "media": {"type": "multipart/form-data", "data": audio_file},
         "metadata": "Testing",
     }
-    with open(file.name, 'rb') as f:
+with open(file.name, 'rb') as f:
     file_bytes = f.read()
     response = requests.post(api_url, headers=headers, data=file_bytes)
 
