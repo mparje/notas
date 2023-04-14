@@ -8,20 +8,14 @@ import openai
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Definir la función para transcribir el audio usando Rev.ai
+# Definir la función para transcribir el audio usando Rev.ai
 def transcribe_audio(audio_file):
-    url = "https://api.rev.ai/speechtotext/v1/jobs"
+    api_url = "https://api.rev.ai/speechtotext/v1/jobs"
     headers = {
         "Authorization": "Bearer " + os.getenv("REV_AI_API_KEY"),
-        "Content-Type": "application/json",
+        "Content-Type": "application/octet-stream"
     }
-    data = {
-        "media": {"type": "multipart/form-data", "data": audio_file},
-        "metadata": "Testing",
-    }
-with open(file.name, 'rb') as f:
-    file_bytes = f.read()
-    response = requests.post(api_url, headers=headers, data=file_bytes)
-
+    response = requests.post(api_url, headers=headers, data=audio_file)
     response.raise_for_status()
     response_data = json.loads(response.text)
     job_id = response_data["id"]
@@ -30,14 +24,15 @@ with open(file.name, 'rb') as f:
         response = requests.get(
             f"https://api.rev.ai/speechtotext/v1/jobs/{job_id}/transcript",
             headers=headers,
-  response.raise_for_status()
-  response_data = json.loads(response.text)
-    if response_data["status"] == "transcribed":
-        transcript_url = response_data["links"]["self"]
-        response = requests.get(transcript_url, headers=headers)
+        )
         response.raise_for_status()
-        transcript_data = json.loads(response.text)
-        transcript = transcript_data["monologues"][0]["elements"]
+        response_data = json.loads(response.text)
+        if response_data["status"] == "transcribed":
+            transcript_url = response_data["links"]["self"]
+            response = requests.get(transcript_url, headers=headers)
+            response.raise_for_status()
+            transcript_data = json.loads(response.text)
+            transcript = transcript_data["monologues"][0]["elements"]
     return transcript
 
 
