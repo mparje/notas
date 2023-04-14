@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+import openai
 import os
 
 API_URL = "https://api.openai.com/v1/audio/transcriptions"
