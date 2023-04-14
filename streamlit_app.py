@@ -1,43 +1,43 @@
-import streamlit as st
-import requests
 import os
+import streamlit as st
+import openai
+import sounddevice as sd
+import soundfile as sf
 
-# Obtener el token de la API desde una variable de entorno
-ACCESS_TOKEN = os.getenv("REVAI_ACCESS_TOKEN")
+st.title("App de Speech to Text con OpenAI")
 
-st.title("Transcripción de audio con Rev.ai")
+# Obtener la clave de la API de OpenAI desde una variable de entorno
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Agregar la opción para subir archivo
-file = st.file_uploader("Seleccionar archivo de audio", type=["mp3", "wav"])
+st.write("Haga clic en el botón para empezar a grabar:")
 
-if file:
-    # Configurar la solicitud
-    headers = {
-        "Authorization": f"Bearer {ACCESS_TOKEN}",
-        "Content-Type": "multipart/form-data"
-    }
+# Función que graba el audio del usuario y lo guarda en un archivo WAV
+def record_audio():
+    duration = 5  # Duración de la grabación en segundos
+    fs = 44100  # Frecuencia de muestreo del audio
+    recording = sd.rec(int(duration * fs), samplerate=fs, channels=1)
+    sd.wait()
+    filename = "grabacion.wav"
+    sf.write(filename, recording, fs)
+    return filename
 
-    # Enviar la solicitud para subir el archivo a Rev.ai
-    response = requests.post("https://api.rev.ai/speechtotext/v1beta/sync", headers=headers, data=file.read())
-
-    # Obtener el ID del trabajo de transcripción
-    job_id = response.json()["id"]
-
-    # Configurar la solicitud para obtener el resultado de la transcripción
-    headers["Accept"] = "application/vnd.rev.transcript.v1.0+text"
-    params = {"filter": "transcript"}
-
-    # Esperar hasta que la transcripción esté lista
-    while True:
-        response = requests.get(f"https://api.rev.ai/speechtotext/v1beta/jobs/{job_id}", headers=headers, params=params)
-        status = response.json()["status"]
-        if status == "transcribed":
-            break
-
-    # Obtener el resultado de la transcripción y mostrarlo en la página
-    transcript = response.json()["monologues"][0]["elements"]
-    result = ""
-    for element in transcript:
-        result += element["value"]
-    st.write("Texto transcrito:")
-    st.write(result)
+if st.button("Grabar"):
+    filename = record_audio()
+    st.write("Grabación finalizada. Transcribiendo texto...")
+    
+    # Leer el archivo WAV y enviarlo a la API de OpenAI para obtener la transcripción
+    with open(filename, "rb") as f:
+        audio_data = f.read()
+    response = openai.Completion.create(
+        engine="davinci",
+        prompt="Transcribe the following audio:",
+        audio=audio_data,
+        max_tokens=1024,
+        n_best=1,
+        temperature=0,
+    )
+    
+    # Mostrar la transcripción en la página
+    transcription = response.choices[0].text.strip()
+    st.write("Transcripción:")
+    st.write(transcription)
