@@ -2,6 +2,7 @@ import os
 import streamlit as st
 import openai
 import soundfile as sf
+import tempfile
 
 st.title("App de Speech to Text con OpenAI")
 
@@ -14,9 +15,10 @@ st.write("Cargue un archivo MP3 para transcribir:")
 def load_audio():
     uploaded_file = st.file_uploader("Seleccione un archivo de audio", type=["mp3"])
     if uploaded_file is not None:
-        filename = "audio_file.mp3"
-        with open(filename, "wb") as f:
-            f.write(uploaded_file.getbuffer())
+        # Crear un archivo temporal para guardar el archivo de audio cargado
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            f.write(uploaded_file.read())
+            filename = f.name
         return filename
 
 filename = load_audio()
@@ -27,12 +29,12 @@ if filename:
     # Leer el archivo MP3 y convertirlo a WAV para poder enviarlo a la API de OpenAI
     with open(filename, "rb") as f:
         audio_data = f.read()
-    wav_data, sample_rate = sf.read(audio_data, dtype='float32')
-    temp_file = "temp_audio_file.wav"
-    sf.write(temp_file, wav_data, sample_rate)
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+        sf.write(f.name, audio_data, samplerate=44100)
+        wav_filename = f.name
 
     # Leer el archivo WAV convertido y enviarlo a la API de OpenAI para obtener la transcripción
-    with open(temp_file, "rb") as f:
+    with open(wav_filename, "rb") as f:
         audio_data = f.read()
     response = openai.Completion.create(
         engine="davinci",
