@@ -1,75 +1,96 @@
 import streamlit as st
 import requests
 import json
-from io import BytesIO
 
-st.set_page_config(page_title="Transcripción de audio", page_icon=":microphone:", layout="wide")
-
-@st.cache(allow_output_mutation=True)
-def get_bearer_token():
-    url = 'https://api.rev.ai/oauth/token'
-    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-    data = {
-        'grant_type': 'client_credentials',
-        'client_id': '<YOUR_CLIENT_ID>',
-        'client_secret': '<YOUR_CLIENT_SECRET>'
+# Define la función para obtener el token de acceso de Rev.ai
+def get_access_token():
+    # Coloca tu Client ID y Client Secret de Rev.ai aquí
+    client_id = "tu_client_id"
+    client_secret = "tu_client_secret"
+    
+    url = "https://api.rev.ai/oauth/token"
+    
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
     }
-
+    
+    data = {
+        "grant_type": "client_credentials",
+        "client_id": client_id,
+        "client_secret": client_secret,
+    }
+    
     response = requests.post(url, headers=headers, data=data)
-    response_json = json.loads(response.content)
-    return response_json['access_token']
+    
+    access_token = response.json()['access_token']
+    
+    return access_token
 
+# Define la función para enviar el archivo de audio a Rev.ai y obtener el ID de trabajo
 def transcribe_audio(audio_file):
-    bearer_token = get_bearer_token()
-    url = 'https://api.rev.ai/speechtotext/v1/jobs'
+    url = "https://api.rev.ai/speechtotext/v1/jobs"
     headers = {
-        'Authorization': f'Bearer {bearer_token}',
-        'Content-Type': 'application/json'
+        "Authorization": f"Bearer {get_access_token()}",
+        "Content-Type": "application/json"
     }
+    
     data = {
-        'media_url': 'https://www.rev.ai/FTC_Sample_1.mp3',
-        'metadata': 'This is a test'
+        "media_url": audio_file,
+        "metadata": "Streamlit Demo"
     }
-
-    audio_bytes = audio_file.read()
+    
     response = requests.post(url, headers=headers, data=json.dumps(data))
-    if response.status_code != 200:
-        raise Exception("Error en la solicitud de transcripción")
-    response_json = json.loads(response.content)
-    job_id = response_json['id']
+    
+    if response.status_code == 200:
+        job_id = response.json()["id"]
+        return job_id
+    else:
+        st.error("Se produjo un error al enviar el archivo de audio a Rev.ai.")
+        return None
 
-    url = f'https://api.rev.ai/speechtotext/v1/jobs/{job_id}/transcript'
+# Define la función para obtener la transcripción a partir del ID de trabajo
+def get_transcript(job_id):
+    url = f"https://api.rev.ai/speechtotext/v1/jobs/{job_id}/transcript"
     headers = {
-        'Authorization': f'Bearer {bearer_token}'
+        "Authorization": f"Bearer {get_access_token()}",
+        "Accept": "application/vnd.rev.transcript.v1.0+json"
     }
+    
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code == 200:
+        transcript = response.json()
+        return transcript
+    else:
+        st.error("Se produjo un error al obtener la transcripción de Rev.ai.")
+        return None
 
-    while True:
-        response = requests.get(url, headers=headers)
-        if response.status_code != 200:
-            raise Exception("Error al obtener la transcripción")
-        response_json = json.loads(response.content)
-        status = response_json['status']
-        if status == 'in_progress':
-            st.text("Transcribiendo...")
-        elif status == 'failed':
-            st.text("La transcripción ha fallado")
-            break
-        elif status == 'completed':
-            transcript_text = ""
-            for i in response_json['monologues']:
-                for j in i['elements']:
-                    transcript_text += j['value'] + " "
-            return transcript_text.strip()
-
-def main():
-    st.title("Transcripción de audio")
-    st.markdown("---")
-
-    uploaded_file = st.file_uploader("Sube un archivo de audio (mp3, wav, m4a)")
-
-    if uploaded_file is not None:
-        transcript = transcribe_audio(uploaded_file)
-        st.markdown(f"**Transcripción:** {transcript}")
-
-if __name__ == '__main__':
-    main()
+# Define la aplicación de Streamlit
+def app():
+    st.set_page_config(page_title="Transcriptor de audio con Streamlit")
+    
+    st.title("Transcriptor de audio con Streamlit")
+    
+    audio_file = st.file_uploader("Cargar archivo de audio", type=["mp3", "wav", "m4a"])
+    
+    if audio_file is not None:
+        st.audio(audio_file, format='audio/mp3', start_time=0)
+        
+        if st.button("Transcribir"):
+            st.write("Transcribiendo...")
+            job_id = transcribe_audio(audio_file)
+            if job_id is not None:
+                st.write("¡La transcripción está lista!")
+                transcript = get_transcript(job_id)
+                if transcript is not None:
+                    for i in range(len(transcript["monologues"])):
+                        speaker = transcript["monologues"][i]["speaker"]
+                        text = transcript["monologues"][i]["elements"][0]["value"]
+                        st.write(f"{speaker}: {text}")
+            else:
+                st.error("No se pudo iniciar la transcripción.")
+    else:
+        st.info("Cargue un archivo de audio para comenzar.")
+        
+if __name__ == "__main__":
+    app()
