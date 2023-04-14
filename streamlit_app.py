@@ -14,27 +14,29 @@ def transcribe_audio(audio_file):
         "Authorization": "Bearer " + os.getenv("REV_AI_API_KEY"),
         "Content-Type": "application/json",
     }
-    with open(audio_file.name, 'rb') as f:
-        file_bytes = f.read()
-        response = requests.post(url, headers=headers, data=file_bytes)
+    data = {
+        "media": {"type": "multipart/form-data", "data": audio_file},
+        "metadata": "Testing",
+    }
+    response = requests.post(url, headers=headers, json=data)
+    response.raise_for_status()
+    response_data = json.loads(response.text)
+    job_id = response_data["id"]
+    transcript = None
+    while transcript is None:
+        response = requests.get(
+            f"https://api.rev.ai/speechtotext/v1/jobs/{job_id}/transcript",
+            headers=headers,
+        )
         response.raise_for_status()
         response_data = json.loads(response.text)
-        job_id = response_data["id"]
-        transcript = None
-        while transcript is None:
-            response = requests.get(
-                f"https://api.rev.ai/speechtotext/v1/jobs/{job_id}/transcript",
-                headers=headers,
-            )
+        if response_data["status"] == "transcribed":
+            transcript_url = response_data["links"]["self"]
+            response = requests.get(transcript_url, headers=headers)
             response.raise_for_status()
-            response_data = json.loads(response.text)
-            if response_data["status"] == "transcribed":
-                transcript_url = response_data["links"]["self"]
-                response = requests.get(transcript_url, headers=headers)
-                response.raise_for_status()
-                transcript_data = json.loads(response.text)
-                transcript = transcript_data["monologues"][0]["elements"]
-        return transcript
+            transcript_data = json.loads(response.text)
+            transcript = transcript_data["monologues"][0]["elements"]
+    return transcript
 
 
 # Definir la función para ordenar el texto
