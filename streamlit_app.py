@@ -26,10 +26,8 @@ st.set_page_config(page_title="Transcripción de audio", page_icon=":microphone:
 
 st.title("Transcripción de audio")
 
-api_key = os.getenv("API_KEY")
-if api_key is None:
-    st.warning("Por favor, ingrese una API key válida en su sistema.")
-    st.stop()
+# Obtener el token de la API desde una variable de entorno
+ACCESS_TOKEN = os.getenv("REVAI_ACCESS_TOKEN")
 
 audio_file = st.file_uploader("Subir archivo de audio", type=["mp3", "wav"])
 if audio_file is not None:
