@@ -3,6 +3,9 @@ import requests
 import os
 import json
 
+# Definir la clave de la API de Rev.ai
+rev_ai_api_key = '02l5R8_G98YSnNk_J5iQXhuVMMVo6cKcraDdGz-XrGRKGZUVlSO1PLmst2krtbrprwhZlLSsYhqK4jAhs8XIYQTUShtdY'
+
 # Obtener la API key de OpenAI desde una variable de entorno
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
