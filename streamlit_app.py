@@ -15,7 +15,7 @@ def transcribe_audio(audio_file):
         "Content-Type": "application/json",
     }
     data = {
-        "media": {"type": "multipart/form-data", "data": audio_file},
+        "media": {"type": "multipart/form-data", "data": io.BytesIO(audio_file.read())},
         "metadata": "Testing",
     }
     response = requests.post(url, headers=headers, json=data)
