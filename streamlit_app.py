@@ -31,7 +31,7 @@ with open(file.name, 'rb') as f:
             f"https://api.rev.ai/speechtotext/v1/jobs/{job_id}/transcript",
             headers=headers,
   response.raise_for_status()
-    response_data = json.loads(response.text)
+  response_data = json.loads(response.text)
     if response_data["status"] == "transcribed":
         transcript_url = response_data["links"]["self"]
         response = requests.get(transcript_url, headers=headers)
