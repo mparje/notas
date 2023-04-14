@@ -1,69 +1,32 @@
 import streamlit as st
 import requests
-import soundfile as sf
-import io
 import os
-import streamlit_webrtc as webrtc
 
-# Token de OpenAI
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+API_URL = "https://api.openai.com/v1/audio/transcriptions"
+API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Modelo de transcripción de OpenAI
-OPENAI_MODEL = "whisper-1"
+st.title("Transcripción de Notas de Voz con OpenAI Whisper")
 
-# Título de la aplicación
-st.title("Transcripción de audio con OpenAI")
+audio_file = st.file_uploader("Carga tu archivo de audio", type=["wav", "mp3"])
 
-# Configurar la captura de audio con streamlit-webrtc
-webrtc_ctx = webrtc.Streamer(
-    audio=True,
-    video=False,
-    desired_audio_format="wav",
-    key="audio",
-)
+if audio_file:
+    audio_bytes = audio_file.read()
 
-# Si se está capturando audio
-if webrtc_ctx.audio_receiver:
-    # Esperar a que se capture algún audio
-    st.info("Habla para grabar un archivo de audio")
-
-    # Iniciar la grabación
-    webrtc_ctx.audio_receiver.start()
-
-    # Esperar a que se capture suficiente audio
-    st.info("Deja de hablar para detener la grabación")
-    webrtc_ctx.audio_receiver.wait_for_frames(10)
-
-    # Detener la grabación
-    webrtc_ctx.audio_receiver.stop()
-
-    # Obtener los datos de audio capturados
-    audio_data = webrtc_ctx.audio_receiver.get_frames()
-
-    # Guardar los datos de audio en un archivo temporal
-    with io.BytesIO() as f:
-        sf.write(f, audio_data, samplerate=44100)
-        f.seek(0)
-
-        # Encabezados de solicitud
+    if st.button("Transcribir"):
         headers = {
-            "Authorization": f"Bearer {OPENAI_API_KEY}",
+            "Authorization": f"Bearer {API_KEY}",
             "Content-Type": "multipart/form-data",
         }
 
-        # Realizar la solicitud a la API de OpenAI
-        response = requests.post(
-            "https://api.openai.com/v1/audio/transcriptions",
-            headers=headers,
-            data={
-                "file": ("audio.wav", f, "audio/wav"),
-                "model": OPENAI_MODEL,
-            },
-        )
+        files = {"file": ("audio.mp3", audio_bytes)}
 
-        # Obtener la transcripción del archivo de audio
-        transcription = response.json()["data"][0]["text"]
+        data = {"model": "whisper-1"}
 
-        # Mostrar la transcripción
-        st.write("Transcripción:")
-        st.write(transcription)
+        response = requests.post(API_URL, headers=headers, data=data, files=files)
+
+        if response.ok:
+            resultado = response.json()["data"][0]["text"]
+            st.write("Transcripción:")
+            st.write(resultado)
+        else:
+            st.write("¡Ha ocurrido un error al transcribir la nota de voz!")
