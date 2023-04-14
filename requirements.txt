@@ -4,6 +4,4 @@ numpy
 soundfile
 requests
 openai
-webrtcvad
-aiohttp
-aiohttp-webrtc
+
