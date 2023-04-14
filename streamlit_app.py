@@ -16,10 +16,10 @@ def transcribe_audio(audio_file):
         "Content-Type": "application/json",
     }
     data = {
-        "media": {"type": "multipart/form-data", "data": io.BytesIO(audio_file.read())},
+        "media": {"type": "audio/mp3", "data": audio_file.getvalue()},
         "metadata": "Testing",
     }
-    response = requests.post(url, headers=headers, json=data)
+    response = requests.post(url, headers=headers, data=json.dumps(data))
     response.raise_for_status()
     response_data = json.loads(response.text)
     job_id = response_data["id"]
@@ -38,6 +38,7 @@ def transcribe_audio(audio_file):
             transcript_data = json.loads(response.text)
             transcript = transcript_data["monologues"][0]["elements"]
     return transcript
+
 
 
 # Definir la función para ordenar el texto
