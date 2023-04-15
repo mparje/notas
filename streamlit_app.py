@@ -1,48 +1,63 @@
 import streamlit as st
+from pydub import AudioSegment
+import numpy as np
 import openai
 import os
-import tempfile
-import webrtc_audio
 
+# Configurar OpenAI
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-def transcribir_audio(audio):
-    respuesta = openai.Completion.create(
-        engine="davinci",
-        audio=audio,
-        prompt="Transcribe el siguiente audio a texto:",
-        temperature=0.5,
-        max_tokens=1024,
-        n_greedy=1,
-        stop=None,
-    )
+# Función para detectar voz utilizando pydub
+def detect_voice(audio_path):
+    # Cargar el archivo de audio utilizando pydub
+    audio = AudioSegment.from_file(audio_path, format="mp3")
+    samples = np.array(audio.get_array_of_samples())
+    
+    # Calcular el nivel de energía de la señal de audio
+    energy = np.abs(samples).mean()
+    
+    # Determinar si la señal de audio es voz o no
+    is_voice = energy > 50  # ajustar este valor según sea necesario
+    
+    return is_voice
 
-    return respuesta.choices[0].text
+# Función para transcribir la voz utilizando OpenAI
+def transcribe_audio(audio_path):
+    # Detectar si hay voz en el archivo de audio
+    is_voice = detect_voice(audio_path)
+    
+    if not is_voice:
+        return ""
+    
+    # Transcribir la voz utilizando OpenAI
+    with open(audio_path, "rb") as f:
+        response = openai.api_request(
+            "v1/audio/transcriptions",
+            method="POST",
+            files={"file": f},
+            data={"model": "whisper-1"},
+        )
+        
+    # Obtener el texto transrito
+    transcription = response["data"][0]["text"]
+    
+    return transcription
 
-st.title("Transcripción de Notas de Voz en Vivo con OpenAI Whisper")
+# Configurar la página de Streamlit
+st.title("Transcripción de voz a texto")
 
-# Configuramos el stream de audio para capturar el audio del micrófono
-stream_audio = webrtc_audio.AudioProcessor(
-    on_recv=lambda data: audio_queue.put(data)
-)
+# Permitir que el usuario suba un archivo de audio
+audio_file = st.file_uploader("Cargar archivo de audio", type=["mp3"])
 
-# Creamos una cola de audio para almacenar los fragmentos de audio capturados
-audio_queue = webrtc_audio.QueueProcessor()
-
-# Creamos una instancia de grabador de audio para grabar el audio capturado
-recorder = webrtc_audio.Recorder(
-    audio_processor=stream_audio,
-    filename_template=tempfile.mktemp(prefix="streamlit-webrtc-", suffix=".webm"),
-    file_format="webm",
-)
-
-# Creamos un botón para iniciar y detener la grabación de audio
-if st.button("Iniciar/Detener Grabación"):
-    recorder.start() if recorder.state == recorder.STATE_STOPPED else recorder.stop()
-
-# Creamos un botón para transcribir el audio capturado
-if st.button("Transcribir Audio"):
-    audio = b"".join(list(audio_queue.queue))
-    resultado = transcribir_audio(audio)
-    st.write("Transcripción:")
-    st.write(resultado)
+# Transcribir la voz si se ha subido un archivo de audio
+if audio_file is not None:
+    # Guardar el archivo de audio en disco
+    with open("audio.mp3", "wb") as f:
+        f.write(audio_file.read())
+    
+    # Transcribir la voz utilizando OpenAI
+    transcription = transcribe_audio("audio.mp3")
+    
+    # Mostrar el resultado de la transcripción
+    st.write("Texto transcrito:")
+    st.write(transcription)
