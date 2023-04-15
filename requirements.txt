@@ -1,5 +1,4 @@
 streamlit
 openai
-webrtcvad
-streamlit-webrtc
-IO
+numpy
+pudub
