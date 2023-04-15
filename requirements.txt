@@ -4,4 +4,4 @@ numpy
 soundfile
 requests
 openai
-
+webrtcvad
