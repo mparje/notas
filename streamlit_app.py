@@ -1,33 +1,48 @@
 import streamlit as st
-import requests
 import openai
 import os
+import tempfile
+import webrtc_audio
 
-API_URL = "https://api.openai.com/v1/audio/transcriptions"
-API_KEY = os.getenv("OPENAI_API_KEY")
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
-st.title("Transcripción de Notas de Voz con OpenAI Whisper")
+def transcribir_audio(audio):
+    respuesta = openai.Completion.create(
+        engine="davinci",
+        audio=audio,
+        prompt="Transcribe el siguiente audio a texto:",
+        temperature=0.5,
+        max_tokens=1024,
+        n_greedy=1,
+        stop=None,
+    )
 
-audio_file = st.file_uploader("Carga tu archivo de audio", type=["wav", "mp3"])
+    return respuesta.choices[0].text
 
-if audio_file:
-    audio_bytes = audio_file.read()
+st.title("Transcripción de Notas de Voz en Vivo con OpenAI Whisper")
 
-    if st.button("Transcribir"):
-        headers = {
-            "Authorization": f"Bearer {API_KEY}",
-            "Content-Type": "multipart/form-data",
-        }
+# Configuramos el stream de audio para capturar el audio del micrófono
+stream_audio = webrtc_audio.AudioProcessor(
+    on_recv=lambda data: audio_queue.put(data)
+)
 
-        files = {"file": ("audio.mp3", audio_bytes)}
+# Creamos una cola de audio para almacenar los fragmentos de audio capturados
+audio_queue = webrtc_audio.QueueProcessor()
 
-        data = {"model": "whisper-1"}
+# Creamos una instancia de grabador de audio para grabar el audio capturado
+recorder = webrtc_audio.Recorder(
+    audio_processor=stream_audio,
+    filename_template=tempfile.mktemp(prefix="streamlit-webrtc-", suffix=".webm"),
+    file_format="webm",
+)
 
-        response = requests.post(API_URL, headers=headers, data=data, files=files)
+# Creamos un botón para iniciar y detener la grabación de audio
+if st.button("Iniciar/Detener Grabación"):
+    recorder.start() if recorder.state == recorder.STATE_STOPPED else recorder.stop()
 
-        if response.ok:
-            resultado = response.json()["data"][0]["text"]
-            st.write("Transcripción:")
-            st.write(resultado)
-        else:
-            st.write("¡Ha ocurrido un error al transcribir la nota de voz!")
+# Creamos un botón para transcribir el audio capturado
+if st.button("Transcribir Audio"):
+    audio = b"".join(list(audio_queue.queue))
+    resultado = transcribir_audio(audio)
+    st.write("Transcripción:")
+    st.write(resultado)
