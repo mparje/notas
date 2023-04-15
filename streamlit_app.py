@@ -60,4 +60,4 @@ if audio_file is not None:
     
     # Mostrar el resultado de la transcripción
     st.write("Texto transcrito:")
-    st.write(transcription)
+    st.write(transcription) 
